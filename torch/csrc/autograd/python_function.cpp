@@ -1,26 +1,26 @@
-#include "torch/csrc/autograd/python_function.h"
+#include <torch/csrc/autograd/python_function.h>
 
-#include "torch/csrc/python_headers.h"
+#include <torch/csrc/python_headers.h>
 #include <structmember.h>
 #include <unordered_map>
 #include <unordered_set>
 #include <exception>
 #include <ATen/ATen.h>
 
-#include "THP.h"
-#include "torch/csrc/autograd/grad_mode.h"
-#include "torch/csrc/autograd/functions/accumulate_grad.h"
-#include "torch/csrc/autograd/functions/basic_ops.h"
-#include "torch/csrc/autograd/functions/utils.h"
-#include "torch/csrc/autograd/python_cpp_function.h"
-#include "torch/csrc/autograd/python_hook.h"
-#include "torch/csrc/autograd/saved_variable.h"
-#include "torch/csrc/autograd/python_anomaly_mode.h"
-#include "torch/csrc/jit/tracer.h"
-#include "torch/csrc/jit/python_tracer.h"
-#include "torch/csrc/DynamicTypes.h"
-#include "torch/csrc/utils/auto_gil.h"
-#include "torch/csrc/Exceptions.h"
+#include <torch/csrc/THP.h>
+#include <torch/csrc/autograd/grad_mode.h>
+#include <torch/csrc/autograd/functions/accumulate_grad.h>
+#include <torch/csrc/autograd/functions/basic_ops.h>
+#include <torch/csrc/autograd/functions/utils.h>
+#include <torch/csrc/autograd/python_cpp_function.h>
+#include <torch/csrc/autograd/python_hook.h>
+#include <torch/csrc/autograd/saved_variable.h>
+#include <torch/csrc/autograd/python_anomaly_mode.h>
+#include <torch/csrc/jit/tracer.h>
+#include <torch/csrc/jit/python_tracer.h>
+#include <torch/csrc/DynamicTypes.h>
+#include <torch/csrc/utils/auto_gil.h>
+#include <torch/csrc/Exceptions.h>
 
 #include <exception>
 #include <functional>
@@ -44,8 +44,9 @@ PyObject *THPFunctionClass = nullptr;
 namespace torch { namespace autograd {
 
 VariableInfo::VariableInfo(const Variable& var)
-  : type(&var.type())
+  : type(&var.dispatch_type())
   , device(var.device())
+  , scalar_type(var.scalar_type())
   , size(var.sizes().vec())
   , requires_grad(var.requires_grad()) {
 }
@@ -53,7 +54,7 @@ VariableInfo::VariableInfo(const Variable& var)
 Variable VariableInfo::zeros(at::OptionalDeviceGuard& device_guard) const {
   // NB: This will NOT work if we ever get mixed device gradients
   device_guard.reset_device(device);
-  return at::zeros(size, type->options());
+  return at::zeros(size, type->options(scalar_type));
 }
 
 auto PyFunction::legacy_apply(const variable_list& inputs) -> variable_list {
@@ -585,10 +586,7 @@ static Node* _trace_pre_record(
   Py_INCREF(op_obj);
   auto pyobj = THPObjectPtr(op_obj);
   return jit::tracer::preRecordPythonTrace(
-    std::move(pyobj),
-    std::move(arg_types),
-    input_vars,
-    std::move(scalar_args));
+      std::move(pyobj), arg_types, input_vars, std::move(scalar_args));
 }
 
 static void _trace_post_record(
@@ -610,7 +608,7 @@ static void _trace_post_record(
   auto graph = node->owningGraph();
   node->addOutput();
   if (!unpack_output) {
-    std::vector<TypePtr> tuple_values(num_outputs, DynamicType::get());
+    std::vector<TypePtr> tuple_values(num_outputs, TensorType::get());
     TypePtr tuple_type = TupleType::create(std::move(tuple_values));
     node->output()->setType(tuple_type);
     auto unpacked = graph->createTupleUnpack(node->output())->insertAfter(node);
@@ -674,8 +672,10 @@ PyObject* process_outputs(PyObject *op_obj, THPFunction* grad_fn, const Unpacked
 PyObject *THPFunction_do_forward(THPFunction *self, PyObject *_inputs)
 {
   HANDLE_TH_ERRORS
-  torch::autograd::profiler::RecordFunction record(Py_TYPE(self)->tp_name,
-                                                   Function::peek_at_next_sequence_nr());
+  RECORD_FUNCTION(
+    Py_TYPE(self)->tp_name,
+    std::vector<c10::IValue>(),
+    Function::peek_at_next_sequence_nr());
 
   auto info_pair = unpack_input<true>(_inputs);
   auto& unpacked_input = info_pair.first;
@@ -705,8 +705,10 @@ PyObject *THPFunction_do_forward(THPFunction *self, PyObject *_inputs)
 PyObject *THPFunction_apply(PyObject *cls, PyObject *inputs)
 {
   HANDLE_TH_ERRORS
-  torch::autograd::profiler::RecordFunction record(((PyTypeObject*)cls)->tp_name,
-                                                   Function::peek_at_next_sequence_nr());
+  RECORD_FUNCTION(
+    ((PyTypeObject*)cls)->tp_name,
+    std::vector<c10::IValue>(),
+    Function::peek_at_next_sequence_nr());
 
   THPObjectPtr backward_cls(PyObject_GetAttrString(cls, "_backward_cls"));
   if (!backward_cls) return nullptr;
@@ -882,7 +884,7 @@ PyObject* THPFunction_register_hook(THPFunction *self, PyObject *hook)
 
 static PyObject *unpack_saved_variables(
     THPFunction *self,
-    std::function<PyObject*(const Variable&)> unpack_fn)
+    const std::function<PyObject*(const Variable&)>& unpack_fn)
 {
   THPUtils_assert(!self->has_freed_buffers, ERR_BACKWARD_TWICE);
   auto& saved_variables = self->saved_variables;

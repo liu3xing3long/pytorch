@@ -1,12 +1,12 @@
-#include "Size.h"
+#include <torch/csrc/Size.h>
 
 #include <string>
-#include "torch/csrc/utils/object_ptr.h"
-#include "torch/csrc/utils/python_strings.h"
-#include "torch/csrc/utils/python_tuples.h"
+#include <torch/csrc/utils/object_ptr.h>
+#include <torch/csrc/utils/python_strings.h>
+#include <torch/csrc/utils/python_tuples.h>
 
-#include "torch/csrc/autograd/python_variable.h"
-#include "torch/csrc/jit/tracer.h"
+#include <torch/csrc/autograd/python_variable.h>
+#include <torch/csrc/jit/tracer.h>
 
 struct THPSize {
   PyTupleObject tuple;
@@ -117,10 +117,10 @@ namespace {
 
 
 static PySequenceMethods THPSize_as_sequence = {
-  PyTuple_Type.tp_as_sequence->sq_length,
+  nullptr,                                          /* sq_length */
   wrap_tuple_fn<decltype(&sq_concat), &sq_concat>,
   wrap_tuple_fn<decltype(&sq_repeat), &sq_repeat>,
-  PyTuple_Type.tp_as_sequence->sq_item,
+  nullptr,                                          /* sq_item */
 #if PY_MAJOR_VERSION == 2
   wrap_tuple_fn<decltype(&sq_slice), &sq_slice>,
 #else
@@ -128,11 +128,11 @@ static PySequenceMethods THPSize_as_sequence = {
 #endif
   nullptr,                                          /* sq_ass_item */
   nullptr,                                          /* sq_ass_slice */
-  PyTuple_Type.tp_as_sequence->sq_contains
+  nullptr                                           /* sq_contains */
 };
 
 static PyMappingMethods THPSize_as_mapping = {
-    PyTuple_Type.tp_as_mapping->mp_length,
+    nullptr,                                        /* mp_length */
     wrap_tuple_fn<decltype(&mp_subscript), &mp_subscript>,
     nullptr
 };

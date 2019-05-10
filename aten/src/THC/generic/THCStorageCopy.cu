@@ -1,5 +1,5 @@
 #ifndef THC_GENERIC_FILE
-#define THC_GENERIC_FILE "generic/THCStorageCopy.cu"
+#define THC_GENERIC_FILE "THC/generic/THCStorageCopy.cu"
 #else
 
 void THCStorage_(rawCopy)(THCState *state, THCStorage *self, scalar_t *src)
@@ -28,6 +28,7 @@ THC_CUDA_STORAGE_IMPLEMENT_COPY(Long,Long)
 THC_CUDA_STORAGE_IMPLEMENT_COPY(Float,)  // i.e. float
 THC_CUDA_STORAGE_IMPLEMENT_COPY(Double,Double)
 THC_CUDA_STORAGE_IMPLEMENT_COPY(Half,Half)
+THC_CUDA_STORAGE_IMPLEMENT_COPY(Bool,Bool)
 
 #undef THC_CUDA_STORAGE_IMPLEMENT_COPY
 

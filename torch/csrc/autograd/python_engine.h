@@ -1,10 +1,9 @@
 #pragma once
 
-#include "torch/csrc/python_headers.h"
+#include <torch/csrc/python_headers.h>
 
-#include "torch/csrc/autograd/function.h"
-#include "torch/csrc/autograd/engine.h"
-#include "torch/csrc/autograd/python_anomaly_mode.h"
+#include <torch/csrc/autograd/function.h>
+#include <torch/csrc/autograd/engine.h>
 
 bool THPEngine_initModule(PyObject *module);
 

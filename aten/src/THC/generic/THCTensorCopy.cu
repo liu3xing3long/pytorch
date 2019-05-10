@@ -1,5 +1,5 @@
 #ifndef THC_GENERIC_FILE
-#define THC_GENERIC_FILE "generic/THCTensorCopy.cu"
+#define THC_GENERIC_FILE "THC/generic/THCTensorCopy.cu"
 #else
 
 void THCTensor_(copy)(THCState* state, THCTensor* dst, THCTensor* src) {
@@ -52,7 +52,7 @@ void THCTensor_copyIgnoringOverlaps<scalar_t>(THCState* state, THCTensor* dst, T
   // FIXME: really, overlapping writes should be illegal/an error in Torch
   THC_pointwiseApply2<scalar_t, scalar_t>(
     state, dst, src,
-    CopyOp<scalar_t, scalar_t>(),
+    CopyOp<scalar_t>(),
     ReadOnly, /* ignore overwrites */
     ReadOnly);
 }

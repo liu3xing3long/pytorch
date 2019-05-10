@@ -1,15 +1,15 @@
-#include "Generator.h"
+#include <torch/csrc/Generator.h>
 
 #include <structmember.h>
 #include <ATen/ATen.h>
 
 #include <TH/TH.h>
-#include "THP.h"
-#include "torch/csrc/Exceptions.h"
-#include "torch/csrc/autograd/python_variable.h"
-#include "torch/csrc/autograd/generated/VariableType.h"
-#include "torch/csrc/utils/tensor_types.h"
-#include "torch/csrc/autograd/generated/variable_factories.h"
+#include <torch/csrc/THP.h>
+#include <torch/csrc/Exceptions.h>
+#include <torch/csrc/autograd/python_variable.h>
+#include <torch/csrc/autograd/generated/VariableType.h>
+#include <torch/csrc/utils/tensor_types.h>
+#include <torch/csrc/autograd/generated/variable_factories.h>
 
 using namespace at;
 using namespace torch;
@@ -82,8 +82,8 @@ static PyObject * THPGenerator_setState(THPGenerator *self, PyObject *_new_state
     throw TypeError("expected a torch.ByteTensor, but got %s", Py_TYPE(_new_state)->tp_name);
   }
   auto& tensor = ((THPVariable*)_new_state)->cdata.data();
-  if (tensor.type() != CPU(kByte)) {
-    auto type_name = torch::utils::type_to_string(tensor.type());
+  if (tensor.layout() != kStrided || tensor.device().type() != kCPU || tensor.scalar_type() != kByte) {
+    auto type_name = torch::utils::type_to_string(tensor.dispatch_type(), tensor.scalar_type());
     throw TypeError("expected a torch.ByteTensor, but got %s", type_name.c_str());
   }
   THGenerator *generator = THPGenerator_TH_CData(self);

@@ -1,6 +1,8 @@
 #include <ATen/core/ivalue.h>
+#include <ATen/core/jit_type.h>
 #include <ATen/core/Formatting.h>
 #include <cmath>
+#include <ATen/core/Dict.h>
 
 namespace c10 {
 namespace ivalue {
@@ -25,6 +27,23 @@ std::ostream& printList(std::ostream & out, const List &v,
     out << IValue(v->elements()[i]);
   }
   out << finish;
+  return out;
+}
+
+template<typename Dict>
+std::ostream& printDict(std::ostream& out, const Dict& v) {
+  out << "{";
+
+  bool first = true;
+  for (const auto& pair : v->elements()) {
+    if (!first) {
+      out << ", ";
+    }
+    out << pair.key() << ": " << pair.value();
+    first = false;
+  }
+
+  out << "}";
   return out;
 }
 
@@ -67,17 +86,60 @@ std::ostream& operator<<(std::ostream & out, const IValue & v) {
     case IValue::Tag::TensorList:
       return printList(out, v.toTensorList(), "[", "]");
     case IValue::Tag::Blob:
-      return out << v.toBlob();
+      return out << *v.toBlob();
     case IValue::Tag::GenericList:
       return printList(out, v.toGenericList(), "[", "]");
     case IValue::Tag::Future:
       return out << "Future";
     case IValue::Tag::Device:
       return out << v.toDevice();
+    case IValue::Tag::GenericDict:
+      return printDict(out, v.toGenericDict());
+    case IValue::Tag::Object:
+      // TODO we should print the object contents
+      return out << "Object<" << v.toObject()->name()
+                 << ">";
   }
   AT_ERROR("Tag not found\n");
 }
 
 #undef TORCH_FORALL_TAGS
+
+void IValue::dump() const {
+  std::cout << *this << "\n";
+}
+
+
+std::string ivalue::Object::name() const {
+  return this->type_->qualname();
+}
+
+void ivalue::Object::resizeObject(size_t slot) {
+  AT_ASSERT(slot < type()->numAttributes());
+  slots_.resize(type()->numAttributes());
+}
+
+static bool CompareIValue(const std::pair<IValue, IValue>& aWrap,
+                          const std::pair<IValue, IValue>& bWrap) {
+  const auto a = aWrap.first;
+  const auto b = bWrap.first;
+  if (a.isString() && b.isString()) {
+    return a.toStringRef().compare(b.toStringRef()) < 0;
+  } else if (a.isInt() && b.isInt()) {
+    return a.toInt() < b.toInt();
+  } else if (a.isDouble() && b.isDouble()) {
+    return a.toDouble() < b.toDouble();
+  }
+  AT_ERROR("Illegal dict key");
+}
+
+const ivalue::GenericDict::IterationOrder ivalue::GenericDict::iterationOrder() const {
+  IterationOrder ordered;
+  for (auto element : elements()) {
+    ordered.emplace_back(element.key(), element.value());
+  }
+  std::sort(ordered.begin(), ordered.end(), CompareIValue);
+  return ordered;
+}
 
 } // namespace c10

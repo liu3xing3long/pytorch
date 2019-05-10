@@ -5,6 +5,7 @@ set(TORCH_API_TEST_SOURCES
   ${TORCH_API_TEST_DIR}/dataloader.cpp
   ${TORCH_API_TEST_DIR}/expanding-array.cpp
   ${TORCH_API_TEST_DIR}/integration.cpp
+  ${TORCH_API_TEST_DIR}/init.cpp
   ${TORCH_API_TEST_DIR}/jit.cpp
   ${TORCH_API_TEST_DIR}/memory.cpp
   ${TORCH_API_TEST_DIR}/misc.cpp
@@ -20,6 +21,7 @@ set(TORCH_API_TEST_SOURCES
   ${TORCH_API_TEST_DIR}/tensor_options_cuda.cpp
   ${TORCH_API_TEST_DIR}/tensor_options.cpp
   ${TORCH_API_TEST_DIR}/tensor.cpp
+  ${TORCH_API_TEST_DIR}/torch_include.cpp
 )
 
 if (USE_CUDA)
